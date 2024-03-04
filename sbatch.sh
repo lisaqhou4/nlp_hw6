@@ -16,3 +16,7 @@ conda activate ssm_hw6 # activate the Python environment
 
 # runs your code
 python base_classification.py --device cuda --model "distilbert-base-uncased" --batch_size "101" --lr 1e-4 --num_epochs 7
+
+
+
+
