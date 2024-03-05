@@ -46,9 +46,15 @@ class CustomModelforSequenceClassification(nn.Module):
 
         elif self.type == "head":
             # TODO: implement the forward function for the head-tuned model
-            raise NotImplementedError("You need to implement the forward function for the head-tuned model")
+            #raise NotImplementedError("You need to implement the forward function for the head-tuned model")
             # Hint: it should be the same as the full model
-
+            output = self.model(input_ids= input_ids, attention_mask=attention_mask)
+            # get the last hidden state from the output object using `.last_hidden_state`
+            final_hidden = output.last_hidden_state
+            # take the mean of the last hidden state along the sequence length dimension
+            mean_final_hidden = torch.mean(final_hidden, dim=1)
+            # pass the mean into the self.classifier to get the logits
+            logits = self.classifier(mean_final_hidden)
             # your code ends here
         
         elif self.type == 'prefix':
@@ -229,24 +235,24 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
 
     if mymodel.type == "head":
         # TODO: implement the optimizer for head-tuned model
-        raise NotImplementedError("You need to implement the optimizer for head-tuned model")
+        #raise NotImplementedError("You need to implement the optimizer for head-tuned model")
         # you need to get the parameters of the classifier (head), you can do this by calling mymodel.head.parameters()
-
+        classifier_params = mymodel.classifier.parameters()
         # then you need to pass these parameters to the optimizer
         # name the optimizer as `custom_optimizer`
         # Hints: you can refer to how we do this for the optimizer above
-
+        custom_optimizer = torch.optim.AdamW(classifier_params, lr=lr)
         # your code ends here
     
     elif mymodel.type == "prefix":
         # TODO: implement the optimizer for prefix-tuned model
-        raise NotImplementedError("You need to implement the optimizer for prefix-tuned model")
+        #raise NotImplementedError("You need to implement the optimizer for prefix-tuned model")
         # you need to get the parameters of the prefix, you can do this by calling mymodel.prefix
         # name the parameters as `prefix_params`
-
+        prefix_params = mymodel.prefix
         # you also need to get the parameters of the classifier (head), you can do this by calling mymodel.head.parameters()
         # name the parameters as `classifier_params`
-
+        classifier_params = mymodel.classifier.parameters()
         # your code ends here
         # group the parameters together
         custom_optimizer = torch.optim.AdamW([prefix_params] + list(classifier_params), lr=lr)
