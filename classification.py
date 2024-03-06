@@ -296,7 +296,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
             id = batch['input_ids'].to(device)
             mask = batch['attention_mask'].to(device)
             labels = batch['labels'].to(device)
-            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA], 
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
                                     profile_memory=True, record_shapes=True) as profiler:
                 with record_function("forward"):
                     output = mymodel(input_ids = id, attention_mask = mask)
@@ -308,7 +308,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     losses = loss(predictions, labels)
             forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
 
-            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA], 
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
                                     profile_memory=True, record_shapes=True) as profiler:
                 with record_function("backward"):
                     # loss backward
