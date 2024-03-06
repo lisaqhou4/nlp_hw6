@@ -338,15 +338,15 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     losses.backward() 
                     # your code ends here
 
-                # update the model parameters depending on the model type
-                if mymodel.type == "full" or mymodel.type == "auto":
-                    optimizer.step()
-                    lr_scheduler.step()
-                    optimizer.zero_grad()
-                else:
-                    custom_optimizer.step()
-                    lr_scheduler.step()
-                    custom_optimizer.zero_grad()
+                    # update the model parameters depending on the model type
+                    if mymodel.type == "full" or mymodel.type == "auto":
+                        optimizer.step()
+                        lr_scheduler.step()
+                        optimizer.zero_grad()
+                    else:
+                        custom_optimizer.step()
+                        lr_scheduler.step()
+                        custom_optimizer.zero_grad()
 
                 predictions = torch.argmax(predictions, dim=1)
                 
@@ -354,7 +354,6 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                 train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
         
         # Collect Memory Usage Data after each epoch
- 
         forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
         backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
 
@@ -379,8 +378,9 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
         epoch_end_time = time.time()
         print(f"Epoch {epoch + 1} took {epoch_end_time - epoch_start_time} seconds")
 
-    plot_cuda_memory_usage(memory_usage_forward, memory_usage_backward, model_name)
-    plot(train_acc_list, dev_acc_list, name=model_name, finetune_method=mymodel.type)
+    print(f"Forward Memory for {model_name} is {sum(memory_usage_forward)}")
+    print(f"Backward Memory for {model_name} is {sum(memory_usage_backward)}")
+    plot(train_acc_list, dev_acc_list, model_name, mymodel.type)
 
 def plot(train_list, valid_list, name, finetune_method):
     
@@ -394,20 +394,6 @@ def plot(train_list, valid_list, name, finetune_method):
     plt.savefig(f'{name}_{finetune_method}.png')
 
 
-def plot_cuda_memory_usage(memory_usage_forward, memory_usage_backward, model_name):
-    print(f"Forward Memory for {model_name} is {memory_usage_forward}")
-    print(f"Backward Memory for {model_name} is {memory_usage_backward}")
-
-    epochs = list(range(1, len(memory_usage_forward) + 1))
-    plt.figure(figsize=(10, 6))
-    plt.bar(epochs, memory_usage_forward, width=0.4, label='Forward Pass', align='center')
-    plt.bar([p + 0.4 for p in epochs], memory_usage_backward, width=0.4, label='Backward Pass', align='center')
-    plt.xlabel('Epoch')
-    plt.ylabel('CUDA Memory Usage (Bytes)')
-    plt.title(f'CUDA Memory Usage During Training: {model_name}')
-    plt.legend()
-    plt.xticks([p + 0.2 for p in epochs], epochs)
-    plt.show()
 
 def pre_process(model_name, batch_size, device, small_subset, type='auto'):
     # download dataset
