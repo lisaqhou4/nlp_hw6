@@ -281,6 +281,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
     dev_acc_list = []
 
     is_first = 0
+
     for epoch in range(num_epochs):
 
         epoch_start_time = time.time()
@@ -308,6 +309,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     #print(labels.shape)
                     losses = loss(predictions, labels)
             if is_first == 0:
+                print("forward:")
                 print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
             # forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
 
@@ -319,8 +321,9 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     # your code ends here
             # backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
             if is_first == 0:
+                print("backward:")
                 print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
-                idx = 1
+                is_first = 1
 
             # update the model parameters depending on the model type
             if mymodel.type == "full" or mymodel.type == "auto":
