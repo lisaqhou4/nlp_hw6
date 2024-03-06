@@ -228,8 +228,8 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
     print(" >>>>>>>>  Initializing optimizer")
 
     # Memory usage data storage  
-    memory_usage_forward = []
-    memory_usage_backward = []
+    # memory_usage_forward = []
+    # memory_usage_backward = []
 
     weight_decay = 0.01
     no_decay = ['bias', 'LayerNorm.weight']
@@ -280,6 +280,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
     train_acc_list = []
     dev_acc_list = []
 
+    is_first = 0
     for epoch in range(num_epochs):
 
         epoch_start_time = time.time()
@@ -290,7 +291,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
         # put the model in training mode (important that this is done each epoch,
         # since we put the model into eval mode during validation)
         mymodel.train()
-        idx = 0
+        
         for index, batch in tqdm(enumerate(train_dataloader)):
 
             id = batch['input_ids'].to(device)
@@ -306,18 +307,18 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     # labels = labels.to(torch.long)
                     #print(labels.shape)
                     losses = loss(predictions, labels)
-            if idx == 0:
+            if is_first == 0:
                 print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
             # forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
 
             with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
-                                    profile_memory=True, record_shapes=True) as profiler:
+                                    profile_memory=True, record_shapes=True) as prof:
                 with record_function("backward"):
                     # loss backward
                     losses.backward() 
                     # your code ends here
             # backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
-            if idx == 0:
+            if is_first == 0:
                 print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
                 idx = 1
 
@@ -337,8 +338,8 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
             train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
         
         # Collect Memory Usage Data after each epoch
-        memory_usage_forward.append(forward_memory)
-        memory_usage_backward.append(backward_memory)
+        # memory_usage_forward.append(forward_memory)
+        # memory_usage_backward.append(backward_memory)
         
         # print evaluation metrics
         print(f" ===> Epoch {epoch + 1}")
@@ -359,8 +360,8 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
         epoch_end_time = time.time()
         print(f"Epoch {epoch + 1} took {epoch_end_time - epoch_start_time} seconds")
 
-    print(f"Forward Memory for {model_name} is {sum(memory_usage_forward)}")
-    print(f"Backward Memory for {model_name} is {sum(memory_usage_backward)}")
+    # print(f"Forward Memory for {model_name} is {sum(memory_usage_forward)}")
+    # print(f"Backward Memory for {model_name} is {sum(memory_usage_backward)}")
     plot(train_acc_list, dev_acc_list, model_name, mymodel.type)
 
 def plot(train_list, valid_list, name, finetune_method):
