@@ -290,75 +290,51 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
         # put the model in training mode (important that this is done each epoch,
         # since we put the model into eval mode during validation)
         mymodel.train()
-        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
-                                    profile_memory=True, record_shapes=True) as profiler:
        
+        for index, batch in tqdm(enumerate(train_dataloader)):
 
-            for index, batch in tqdm(enumerate(train_dataloader)):
-
-                """
-                You need to make some changes here to make this function work.
-                Specifically, you need to: 
-                Extract the input_ids, attention_mask, and labels from the batch; then send them to the device. 
-                Then, pass the input_ids and attention_mask to the model to get the logits.
-                Then, compute the loss using the logits and the labels.
-                Then, depending on model.type, you may want to use different optimizers
-                Then, call loss.backward() to compute the gradients.
-                Then, call lr_scheduler.step() to update the learning rate.
-                Then, call optimizer.step()  to update the model parameters.
-                Then, call optimizer.zero_grad() to reset the gradients for the next iteration.
-                Then, compute the accuracy using the logits and the labels.
-                """
-
-                # TODO: implement the training loop
-                #raise NotImplementedError("You need to implement this function")
-                
-                # get the input_ids, attention_mask, and labels from the batch and put them on the device
-                # Hints: similar to the evaluate_model function
-                id = batch['input_ids'].to(device)
-                mask = batch['attention_mask'].to(device)
-                labels = batch['labels'].to(device)
-
+            id = batch['input_ids'].to(device)
+            mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA], 
+                                    profile_memory=True, record_shapes=True) as profiler:
                 with record_function("forward"):
-                    # forward pass
-                    # name the output as `output`
-                    # Hints: refer to the evaluate_model function on how to get the predictions (logits)
-                    # - It's slightly different from the implementation in train of base_classification.py
                     output = mymodel(input_ids = id, attention_mask = mask)
                     predictions = output['logits']
-
                     # compute the loss using the loss function
                     #print(predictions.shape)   
                     # labels = labels.to(torch.long)
                     #print(labels.shape)
                     losses = loss(predictions, labels)
+            forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
 
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA], 
+                                    profile_memory=True, record_shapes=True) as profiler:
                 with record_function("backward"):
                     # loss backward
                     losses.backward() 
                     # your code ends here
+            backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
 
-                    # update the model parameters depending on the model type
-                    if mymodel.type == "full" or mymodel.type == "auto":
-                        optimizer.step()
-                        lr_scheduler.step()
-                        optimizer.zero_grad()
-                    else:
-                        custom_optimizer.step()
-                        lr_scheduler.step()
-                        custom_optimizer.zero_grad()
+            # update the model parameters depending on the model type
+            if mymodel.type == "full" or mymodel.type == "auto":
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+            else:
+                custom_optimizer.step()
+                lr_scheduler.step()
+                custom_optimizer.zero_grad()
 
-                predictions = torch.argmax(predictions, dim=1)
+            predictions = torch.argmax(predictions, dim=1)
                 
-                # update metrics
-                train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
+            # update metrics
+            train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
         
         # Collect Memory Usage Data after each epoch
-        forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
-        backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
-
         memory_usage_forward.append(forward_memory)
         memory_usage_backward.append(backward_memory)
+        
         # print evaluation metrics
         print(f" ===> Epoch {epoch + 1}")
         train_acc = train_accuracy.compute()
