@@ -290,14 +290,14 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
         # put the model in training mode (important that this is done each epoch,
         # since we put the model into eval mode during validation)
         mymodel.train()
-       
+        idx = 0
         for index, batch in tqdm(enumerate(train_dataloader)):
 
             id = batch['input_ids'].to(device)
             mask = batch['attention_mask'].to(device)
             labels = batch['labels'].to(device)
             with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
-                                    profile_memory=True, record_shapes=True) as profiler:
+                                    profile_memory=True, record_shapes=True) as prof:
                 with record_function("forward"):
                     output = mymodel(input_ids = id, attention_mask = mask)
                     predictions = output['logits']
@@ -306,7 +306,9 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     # labels = labels.to(torch.long)
                     #print(labels.shape)
                     losses = loss(predictions, labels)
-            forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
+            if idx == 0:
+                print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
+            # forward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "forward" in event.name)
 
             with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA], 
                                     profile_memory=True, record_shapes=True) as profiler:
@@ -314,7 +316,10 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
                     # loss backward
                     losses.backward() 
                     # your code ends here
-            backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
+            # backward_memory = sum(event.cuda_memory_usage for event in profiler.events() if "backward" in event.name)
+            if idx == 0:
+                print(prof.key_averages().table(sort_by="cuda_memory_usage", row_limit=4)) 
+                idx = 1
 
             # update the model parameters depending on the model type
             if mymodel.type == "full" or mymodel.type == "auto":
