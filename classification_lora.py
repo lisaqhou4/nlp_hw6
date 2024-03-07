@@ -274,7 +274,7 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, test_dat
     plt.ylabel('Accuracy')
     plt.title('Training and Validation Accuracy')
     plt.legend()
-    save_path = "overfit.png" if small_subset else "base_full.png"
+    save_path = "overfit.png" if small_subset else "lora_base_full.png"
     plt.savefig(save_path)
 
 def pre_process(model_name, batch_size, device, small_subset):
