@@ -1,1 +1,1 @@
-# cs601_hw6
+#Lisa Hou Self Supervised Model HW 6
