@@ -31,76 +31,37 @@ class CustomModelforSequenceClassification(nn.Module):
     def forward(self, input_ids, attention_mask):
         
         if self.type == "full":
-            # TODO: implement the forward function for the full model
-            #raise NotImplementedError("You need to implement the forward function for the full model")
-
-            # pass the input_ids and attention_mask into the model to get the output object (you can name it `output`)
             output = self.model(input_ids= input_ids, attention_mask=attention_mask)
-            # get the last hidden state from the output object using `.last_hidden_state`
+
             final_hidden = output.last_hidden_state
-            # take the mean of the last hidden state along the sequence length dimension
             mean_final_hidden = torch.mean(final_hidden, dim=1)
-            # pass the mean into the self.classifier to get the logits
             logits = self.classifier(mean_final_hidden)
-            # your code ends here
 
         elif self.type == "head":
-            # TODO: implement the forward function for the head-tuned model
-            #raise NotImplementedError("You need to implement the forward function for the head-tuned model")
-            # Hint: it should be the same as the full model
+
             output = self.model(input_ids= input_ids, attention_mask=attention_mask)
-            # get the last hidden state from the output object using `.last_hidden_state`
+
             final_hidden = output.last_hidden_state
-            # take the mean of the last hidden state along the sequence length dimension
             mean_final_hidden = torch.mean(final_hidden, dim=1)
-            # pass the mean into the self.classifier to get the logits
             logits = self.classifier(mean_final_hidden)
-            # your code ends here
         
         elif self.type == 'prefix':
-
-            # TODO: implement the forward function for the prefix-tuned model
-            #raise NotImplementedError("You need to implement the forward function for the prefix-tuned model")
-
-            # the prefix is at self.prefix, but this is only one prefix, we want to append it to each instance in a batch
-            # we make multiple copies of self.prefix here. the number of copies = batch size
             tensor_prefix = self.prefix
             repeat_prefix = tensor_prefix.repeat(input_ids.shape[0], 1, 1)
-            
-            # concatentate the input embeddings and our prefix, make sure to put them into our gpu
-            # get the input embeddings
-            # Hint: you can use self.model.embeddings.word_embeddings to get the input embeddings
             embed = self.model.embeddings.word_embeddings(input_ids)
-            # concatenate the input embeddings and the prefix
-            # Hint: check torch.cat for how to concatenate the tensors
-            
+
             prefix_embed =torch.cat([repeat_prefix, embed], dim=1)
-            # move the input embeddings to the gpu
-            # Hint: use .to(device='cuda') to move the tensor to the gpu
-            # name the final tensor as `inputs_embeds`
             inputs_embeds = prefix_embed.to(args.device)
             
-            # modify attention mask
-            # we need to add the prefix to the attention mask
-            # the mask on the prefix should be 1, with the dimension of (batch_size, prefix_length)
-            # name the final attention mask as `attention_mask`
             prefix_mask = torch.ones((inputs_embeds.size(dim=0), prefix_length), dtype=torch.long)
             prefix_mask = prefix_mask.to(args.device)
             attention_mask = torch.cat([prefix_mask, attention_mask], dim=1)
 
-            # pass the input embeddings and the attention mask into the model
-            # you can do this by passing a keyword argument "inputs_embeds" to model.forward
             output = self.model.forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
-            # your code ends here
 
-            # get the last hidden state from the output object, take the mean, and pass it into the classifier
-            # Hint: same as the full model and head-tuned model
             last_h_state = output.last_hidden_state
             mean_last_h_state = torch.mean(last_h_state, dim=1)
             logits = self.classifier(mean_last_h_state)
-
-
-            # your code ends here
 
         return {"logits": logits}
     
